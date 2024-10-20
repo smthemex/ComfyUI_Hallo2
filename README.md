@@ -1,6 +1,12 @@
 # ComfyUI_Hallo2
 [Hallo2](https://github.com/fudan-generative-vision/hallo2): Long-Duration and High-Resolution Audio-driven Portrait Image Animation,
 
+## Updates:
+**2024/10/20** 
+* Currently, only square 512 images and 2x magnification are supported(目前仅支持方形512图像和2倍放大,官方模型和方法所限)  
+* input audio must be *.wav (输入的音频格式只能是wav,采样用的是16000,你要用高保真的自己合成就是了,别矫情.)
+  
+
 1.Installation
 -----
 In the ./ComfyUI /custom_node directory, run the following:   
@@ -80,7 +86,7 @@ Normal checkpoints
 ```
 5 Example
 ----     
-
+![](https://github.com/smthemex/ComfyUI_Hallo2/blob/main/example.gif)
 
 6 Citation
 ------
