@@ -1400,9 +1400,16 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
         
         unet_config = cls.load_config(config_path)
         model = cls.from_config(unet_config)
-        state_dict = load_file(
-            pretrained_model_path, device="cpu"
-        )
+        try:
+            state_dict = load_file(pretrained_model_path, device="cpu")
+        except:
+            try:
+                state_dict = torch.load(pretrained_model_path, map_location="cpu", weights_only=False)
+            except:
+                try:
+                    state_dict = torch.load(pretrained_model_path, map_location="cpu", weights_only=True)
+                except:
+                    raise "un support torch version or checkpoints"
         # # load the vanilla weights
         # if pretrained_model_path.joinpath(SAFETENSORS_WEIGHTS_NAME).exists():
         #     logger.debug(
@@ -1430,7 +1437,7 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
                     state_dict[k] = model_state_dict[k]
         # load the weights into the model
         m, u = model.load_state_dict(state_dict, strict=False)
-        print(m, u)
+        print(len(m), len(u))
         
         return model
     
@@ -1478,9 +1485,18 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
         unet_config["cross_attention_dim"] = 1024 #1024
 
         model = cls.from_config(unet_config)
-        state_dict = load_file(
-                pretrained_model_path, device="cpu"
-            )
+        
+        try:
+            state_dict = load_file(pretrained_model_path, device="cpu")
+        except:
+            try:
+                state_dict = torch.load(pretrained_model_path, map_location="cpu", weights_only=False)
+            except:
+                try:
+                    state_dict = torch.load(pretrained_model_path, map_location="cpu", weights_only=True)
+                except:
+                    raise "un support torch version or checkpoints"
+        
         # # load the vanilla weights
         # if pretrained_model_path.joinpath(SAFETENSORS_WEIGHTS_NAME).exists():
         #     logger.debug(
@@ -1508,6 +1524,6 @@ class UNet2DConditionModel(ModelMixin, ConfigMixin, UNet2DConditionLoadersMixin)
                     state_dict[k] = model_state_dict[k]
         # load the weights into the model
         m, u = model.load_state_dict(state_dict, strict=False)
-        print(m, u)
+        print(len(m), len(u))
 
         return model

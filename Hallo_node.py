@@ -25,7 +25,7 @@ from .hallo.models.face_locator import FaceLocator
 from .hallo.models.image_proj import ImageProjModel
 from .hallo.models.audio_proj import AudioProjModel
 from .hallo.animate.face_animate import FaceAnimatePipeline
-from .video_sr import run_realesrgan
+from .hallo.video_sr import run_realesrgan,pre_u_loader
 
 from .utils import load_images,tensor2cv
 import folder_paths
@@ -320,8 +320,9 @@ class HalloPreImgAndAudio:
                                              clip_length)
         audio_embs = process_audio_emb(audio_embs)
         
-      
         audio_emb={"audio_emb":audio_embs,"audio_length":audio_length,"clip_length":clip_length,"img_size": (width,height), "driving_audio_path": driving_audio_file,"fps":fps}
+        
+        torch.cuda.empty_cache()
         
         return (audio_emb,image_emb,)
     
@@ -431,8 +432,9 @@ class HalloLoader:
             scheduler=val_noise_scheduler,
             image_proj=net.imageproj,
         )
-        pipeline.to(device=device, dtype=weight_dtype)
         model={"pipeline":pipeline,"net":net}
+        pipeline.to(dtype=weight_dtype)
+        torch.cuda.empty_cache()
         return (model,)
     
 class HalloSampler:
@@ -499,8 +501,10 @@ class HalloSampler:
     CATEGORY = "Hallo2"
     
     def sampler_main(self, model,audio_emb,image_emb,seed,pose_scale,face_scale,lip_scale,steps,cfg,use_mask,save_video):
+        
         #pre data
         pipeline=model.get("pipeline")
+        pipeline.to(device=device)
         net=model.get("net")
         
         clip_length=audio_emb.get("clip_length")
@@ -516,12 +520,88 @@ class HalloSampler:
         source_image_face_emb=image_emb.get("source_image_face_emb")
         source_image_face_region=image_emb.get("source_image_face_region")
         source_image_pixels=image_emb.get("source_image_pixels")
-
+        torch.cuda.empty_cache()
         iamge,path=inference_process(driving_audio_path,pose_scale,face_scale,lip_scale,audio_emb_in,clip_length,audio_length,source_image_pixels,source_image_face_region,
                       source_image_face_emb,source_image_full_mask,source_image_face_mask,source_image_lip_mask,img_size,net,pipeline,steps,cfg,seed,use_mask,save_video,frame_rate)
         
+        try:
+            del net
+        except:
+            pass
+        pipeline.to("cpu")# move pipeline to cpu ,cause OOM if VRAM<12
+        torch.cuda.empty_cache()
         return (iamge,float(frame_rate),path,)
 
+
+class HallosUpscaleloader:
+    def __init__(self):
+        pass
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        ckpt_list_filter_U = [i for i in folder_paths.get_filename_list("Hallo") if i.endswith(".pth") and "lib" in i]
+        return {
+            "required": {
+                "realesrgan": (["none"] + folder_paths.get_filename_list("upscale_models"),),
+                "face_detection_model": (["none"] + ckpt_list_filter_U,),
+                "bg_upsampler": (['realesrgan', 'none', ],),
+                "face_upsample": ("BOOLEAN", {"default": False},),
+                "has_aligned": ("BOOLEAN", {"default": False},),
+                "bg_tile": ("INT", {
+                    "default": 400,
+                    "min": 200,  # Minimum value
+                    "max": 1000,  # Maximum value
+                    "step": 10,  # Slider's step
+                    "display": "number",  # Cosmetic only: display as "number" or "slider"
+                }),
+                "upscale": ("INT", {
+                    "default": 2,
+                    "min": 2,  # Minimum value
+                    "max": 4,  # Maximum value
+                    "step": 2,  # Slider's step
+                    "display": "number",  # Cosmetic only: display as "number" or "slider"
+                }),
+                         },
+        }
+    
+    RETURN_TYPES = ("HALLO_U_MODEL",)
+    RETURN_NAMES = ("model",)
+    FUNCTION = "Upscale_main"
+    CATEGORY = "Hallo2"
+    
+    def Upscale_main(self,realesrgan, face_detection_model,bg_upsampler,face_upsample,has_aligned,bg_tile,upscale ):
+        
+        if realesrgan == "none":
+            raise "need chocie a 2x upcsale model!"
+        model_path = folder_paths.get_full_path("upscale_models", realesrgan)
+        
+        parse_model = os.path.join(weigths_facelib_path, "parsing_parsenet.pth")
+        if not os.path.exists(parse_model):
+            print(f"no 'parsing_parsenet.pth' in {parse_model} ,try download from huggingface!")
+            hf_hub_download(
+                repo_id="fudan-generative-ai/hallo2",
+                subfolder="facelib",
+                filename="parsing_parsenet.pth",
+                local_dir=weigths_current_path,
+            )
+        
+        if face_detection_model == "none":
+            raise "need chocie a face_detection_model,resent or yolov5"
+        face_detection_model = folder_paths.get_full_path("Hallo", face_detection_model)
+        
+        hallo_model_path = os.path.join(weigths_hallo2_path, "net_g.pth")
+        if not os.path.exists(hallo_model_path):
+            print(f"no net_g.pth in {weigths_hallo2_path} ,try download from huggingface!")
+            hf_hub_download(
+                repo_id="fudan-generative-ai/hallo2",
+                subfolder="hallo2",
+                filename="net_g.pth",
+                local_dir=weigths_current_path,
+            )
+    
+        net,face_upsampler,bg_upsampler,face_helper=pre_u_loader(bg_upsampler, model_path, bg_tile, upscale, face_upsample, device, hallo_model_path,face_detection_model,parse_model,has_aligned)
+        model={"net":net,"face_upsampler":face_upsampler,"bg_upsampler":bg_upsampler,"upscale":upscale,"face_helper":face_helper,"has_aligned":has_aligned,"face_upsample":face_upsample}
+        return (model,)
 
 class HallosVideoUpscale:
     def __init__(self):
@@ -533,19 +613,10 @@ class HallosVideoUpscale:
         video_files = [f for f in os.listdir(input_path) if
                        os.path.isfile(os.path.join(input_path, f)) and f.split('.')[-1] in ['webm', 'mp4', 'mkv',
                                                                                             'gif']]
-        ckpt_list_filter_U = [i for i in folder_paths.get_filename_list("Hallo") if i.endswith(".pth") and "lib" in i]
         return {
             "required": {
+                "model":("HALLO_U_MODEL",),
                 "video_path": (["none"] + video_files,),
-                "realesrgan": (["none"] + folder_paths.get_filename_list("upscale_models"),),
-                "face_detection_model": (["none"] + ckpt_list_filter_U,),
-                "upscale": ("INT", {
-                    "default": 2,
-                    "min": 2,  # Minimum value
-                    "max": 4,  # Maximum value
-                    "step": 2,  # Slider's step
-                    "display": "number",  # Cosmetic only: display as "number" or "slider"
-                }),
                 "fidelity_weight": ("FLOAT", {
                     "default": 0.5,
                     "min": 0.0,
@@ -554,18 +625,8 @@ class HallosVideoUpscale:
                     "round": 0.01,
                     "display": "number",
                 }),
-                "bg_tile": ("INT", {
-                    "default": 400,
-                    "min": 200,  # Minimum value
-                    "max": 1000,  # Maximum value
-                    "step": 10,  # Slider's step
-                    "display": "number",  # Cosmetic only: display as "number" or "slider"
-                }),
-                "bg_upsampler": (['realesrgan','none',],),
-                "has_aligned": ("BOOLEAN", {"default": False},),
                 "only_center_face": ("BOOLEAN", {"default": False},),
                 "draw_box": ("BOOLEAN", {"default": False},),
-                "face_upsample": ("BOOLEAN", {"default": False},),
                 "save_video": ("BOOLEAN", {"default": False},),
                 
             },
@@ -581,15 +642,23 @@ class HallosVideoUpscale:
     FUNCTION = "Upscale_main"
     CATEGORY = "Hallo2"
     
-    def Upscale_main(self,video_path,realesrgan,face_detection_model, upscale,fidelity_weight, bg_tile,bg_upsampler,has_aligned,only_center_face,draw_box, face_upsample,save_video,**kwargs):
+    def Upscale_main(self,model,video_path,fidelity_weight,only_center_face,draw_box, save_video,**kwargs):
         # pre data
         video_img=kwargs.get("image")
         audio=kwargs.get("audio")
         frame_rate=kwargs.get("frame_rate")
         sampler_path=kwargs.get("path")
-        
+
+        #pre model
+        net_g = model.get("net")
+        face_upsampler= model.get( "face_upsampler")
+        bg_upsampler=model.get( "bg_upsampler")
+        upscale=model.get( "upscale")
+        face_helper=model.get( "face_helper")
+        has_aligned=model.get( "has_aligned")
+        face_upsample=model.get( "face_upsample")
+
         front_path=Path(sampler_path) if sampler_path and os.path.exists(Path(sampler_path)) else None
-        
         video_list=[]
         if isinstance(video_img,list) :
             if isinstance(video_img[0],torch.Tensor):
@@ -621,43 +690,14 @@ class HallosVideoUpscale:
             path = None
         
         if not video_list and video_path=="none" and not front_path:
-            raise "Need choice a video or link 'path' or link 'image' in the front!!!"
+            raise "Need choice a video or link 'path or image' in the front!!!"
             
         output_path=folder_paths.get_output_directory()
-        if realesrgan=="none":
-            raise "need chocie a 2x upcsale model!"
-        model_path = folder_paths.get_full_path("upscale_models", realesrgan)
-        
-        parse_model=os.path.join(weigths_facelib_path,"parsing_parsenet.pth")
-        if not os.path.exists(parse_model):
-            print(f"no 'parsing_parsenet.pth' in {parse_model} ,try download from huggingface!")
-            hf_hub_download(
-                repo_id="fudan-generative-ai/hallo2",
-                subfolder="facelib",
-                filename="parsing_parsenet.pth",
-                local_dir=weigths_current_path,
-            )
-        
-        if face_detection_model=="none":
-            raise "need chocie a face_detection_model,resent or yolov5"
-        face_detection_model=folder_paths.get_full_path("Hallo", face_detection_model)
-        
-        
-        hallo_model_path = os.path.join(weigths_hallo2_path, "net_g.pth")
-        if not os.path.exists( hallo_model_path):
-            print(f"no net_g.pth in {weigths_hallo2_path} ,try download from huggingface!")
-            hf_hub_download(
-                repo_id="fudan-generative-ai/hallo2",
-                subfolder="hallo2",
-                filename="net_g.pth",
-                local_dir=weigths_current_path,
-            )
         
         #infer
         print("Start to video upscale processing...")
-        video_image,audio_form_v,fps=run_realesrgan(video_list,audio,frame_rate,model_path, hallo_model_path, fidelity_weight, path, output_path, upscale,
-                       has_aligned, only_center_face, draw_box, face_detection_model, bg_upsampler,
-                       face_upsample, bg_tile,parse_model,save_video, suffix="",)
+        video_image,audio_form_v,fps=run_realesrgan(video_list,audio,frame_rate, fidelity_weight, path, output_path,
+                       has_aligned, only_center_face, draw_box, bg_upsampler,save_video,net_g, face_upsampler, upscale,face_helper,face_upsample,suffix="",)
         if path is not None:
             audio = audio_form_v
         frame_rate = float(fps)
@@ -675,12 +715,16 @@ NODE_CLASS_MAPPINGS = {
     "HalloPreImgAndAudio":HalloPreImgAndAudio,
     "HalloLoader": HalloLoader,
     "HallosSampler":HalloSampler,
+    "HallosUpscaleloader":HallosUpscaleloader,
     "HallosVideoUpscale":HallosVideoUpscale,
+    
+    
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "HalloPreImgAndAudio":"HalloPreImgAndAudio",
     "HalloLoader": "HalloLoader",
     "HalloSampler":"HalloSampler",
+    "HallosUpscaleloader":"HallosUpscaleloader",
     "HallosVideoUpscale":"HallosVideoUpscale"
 }
