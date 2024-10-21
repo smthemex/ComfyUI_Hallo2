@@ -259,7 +259,7 @@ def inference_process(driving_audio_path,pose_weight,face_weight,lip_weight,audi
             f = tensor_result.shape[1]
             length = min(f, audio_length)
             tensor_result = tensor_result[:, :length] #torch.Size([3, 188, 512, 512])
-            tensor_list= tensor_result.clone().permute(1, 2, 3, 0) # convert to [f, h, w, c]  comfyUI [B,H,W,C], C=3
+            tensor_list= tensor_result.permute(1, 2, 3, 0) # convert to [f, h, w, c]  comfyUI [B,H,W,C], C=3
             
             ic(tensor_result.shape)
             ic(start)
@@ -275,7 +275,7 @@ def inference_process(driving_audio_path,pose_weight,face_weight,lip_weight,audi
                 start += length
             else:
                 output_path=""
-                
+            torch.cuda.empty_cache()
     return tensor_list,output_path
     
 

@@ -781,9 +781,18 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         model = cls.from_config(unet_config, **unet_additional_kwargs)
         # load the vanilla weights
         
-        state_dict = load_file(
-            pretrained_model_path, device="cpu"
-        )
+        try:
+            state_dict = load_file(pretrained_model_path, device="cpu")
+        except:
+            try:
+                state_dict = torch.load(pretrained_model_path, map_location="cpu", weights_only=False)
+            except:
+                try:
+                    state_dict = torch.load(pretrained_model_path, map_location="cpu", weights_only=True)
+                except:
+                    raise "un support torch version or checkpoints"
+            
+
         # if pretrained_model_path.joinpath(SAFETENSORS_WEIGHTS_NAME).exists():
         #     logger.debug(
         #         f"loading safeTensors weights from {pretrained_model_path} ..."
@@ -838,12 +847,13 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                     state_dict[k] = model_state_dict[k]
         # load the weights into the model
         m, u = model.load_state_dict(state_dict, strict=False)
-        logger.debug(
-            f"### missing keys: {len(m)}; \n### unexpected keys: {len(u)};")
+        print(len(m), len(u))
+        # logger.debug(
+        #     f"### missing keys: {len(m)}; \n### unexpected keys: {len(u)};")
 
-        params = [
-            p.numel() if "temporal" in n else 0 for n, p in model.named_parameters()
-        ]
-        logger.info(f"Loaded {sum(params) / 1e6}M-parameter motion module")
+        # params = [
+        #     p.numel() if "temporal" in n else 0 for n, p in model.named_parameters()
+        # ]
+        # logger.info(f"Loaded {sum(params) / 1e6}M-parameter motion module")
 
         return model
