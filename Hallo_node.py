@@ -15,7 +15,7 @@ import platform
 import subprocess
 from pathlib import Path
 from huggingface_hub import hf_hub_download
-
+from safetensors.torch import load_file
 from .scripts.inference_long import cut_audio,Net,process_audio_emb,inference_process
 from .hallo.datasets.audio_processor import AudioProcessor
 from .hallo.models.unet_2d_condition import UNet2DConditionModel
@@ -418,7 +418,19 @@ class HalloLoader:
             audio_proj,
         )
         
-        m, u = net.load_state_dict(torch.load(audio_ckpt_weights,map_location="cpu"),)
+        
+        try:
+            state_dict = load_file(audio_ckpt_weights, device="cpu")
+        except:
+            try:
+                state_dict = torch.load(audio_ckpt_weights, map_location="cpu", weights_only=False)
+            except:
+                try:
+                    state_dict = torch.load(audio_ckpt_weights, map_location="cpu", weights_only=True)
+                except:
+                    raise "un support torch version or checkpoints"
+        
+        m, u = net.load_state_dict(state_dict)
         
         assert len(m) == 0 and len(u) == 0, "Fail to load correct checkpoint."
         print(f"loaded weight from : {audio_ckpt_weights} .", )
