@@ -254,9 +254,10 @@ class HalloPreImgAndAudio:
         img_pil=tensor2pil_upscale(image,width, height)
         cache_path = folder_paths.get_output_directory()
         #pre models
+        print("pre img processing")
         model_path=os.path.join(weigths_face_analysis_path,"face_landmarker_v2_with_blendshapes.task")
         if not os.path.exists(model_path): # download if none
-            model_path = hf_hub_download(
+            hf_hub_download(
                 repo_id="fudan-generative-ai/hallo2",
                 subfolder="face_analysis/models",
                 filename="face_landmarker_v2_with_blendshapes.task",
@@ -283,7 +284,7 @@ class HalloPreImgAndAudio:
             (mask.repeat(clip_length, 1))
             for mask in source_image_lip_mask
         ]
-        
+        print("img processing is done")
         image_emb= {"source_image_lip_mask":source_image_lip_mask, "source_image_face_mask":source_image_face_mask, "source_image_full_mask":source_image_full_mask, "source_image_face_emb":source_image_face_emb, "source_image_face_region":source_image_face_region, "source_image_pixels": source_image_pixels}
         # pre audio
         sample_rate = 16000  # config.data.driving_audio.sample_rate
@@ -315,11 +316,12 @@ class HalloPreImgAndAudio:
                     filename=i,
                     local_dir=weigths_current_path,
                 )
+        print("pre radio processing")
         audio_embs, audio_length = load_audio(use_cut, driving_audio_file, save_path, sample_rate, fps,
                                              weigths_wav2vec_path, wav2vec_only_last_features, audio_separator_model_file,
                                              clip_length)
         audio_embs = process_audio_emb(audio_embs)
-        
+        print("radio processing is done")
         audio_emb={"audio_emb":audio_embs,"audio_length":audio_length,"clip_length":clip_length,"img_size": (width,height), "driving_audio_path": driving_audio_file,"fps":fps}
         
         torch.cuda.empty_cache()
@@ -552,9 +554,10 @@ class HallosUpscaleloader:
     @classmethod
     def INPUT_TYPES(s):
         ckpt_list_filter_U = [i for i in folder_paths.get_filename_list("Hallo") if i.endswith(".pth") and "lib" in i]
+        upscale_list=[i for i in folder_paths.get_filename_list("upscale_models") if "x2plus" in i.lower()]
         return {
             "required": {
-                "realesrgan": (["none"] + folder_paths.get_filename_list("upscale_models"),),
+                "realesrgan": (["none"] + upscale_list,),
                 "face_detection_model": (["none"] + ckpt_list_filter_U,),
                 "bg_upsampler": (['realesrgan', 'none', ],),
                 "face_upsample": ("BOOLEAN", {"default": False},),
