@@ -12,7 +12,7 @@ import sys
 import time
 import torch
 from torchvision.transforms.functional import normalize
-
+from safetensors.torch import load_file
 #sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from .basicsr.utils import imwrite, img2tensor, tensor2img
@@ -83,7 +83,22 @@ def pre_u_loader(bg_upsampler,model_path,bg_tile,upscale,face_upsample,device,ha
     
     ckpt_path = hallo_model_path  # './pretrained_models/hallo2/net_g.pth'
     
-    checkpoint = torch.load(ckpt_path)['params_ema']
+    try:
+        checkpoint = load_file(ckpt_path, device="cpu")['params_ema']
+    except:
+        try:
+            checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=False)['params_ema']
+        except:
+            try:
+                checkpoint = torch.load(ckpt_path, map_location="cpu", weights_only=True)['params_ema']
+            except:
+                raise "un support torch version or checkpoints"
+    
+    
+    #checkpoint = torch.load(ckpt_path)['params_ema']
+    
+    
+    
     m, n = net.load_state_dict(checkpoint, strict=False)
     print("missing key: ", m)
     assert len(n) == 0
