@@ -4,9 +4,8 @@
 ## Updates:
 **2024/10/21** 
 * 修复模块导入的错误，以及显存溢出，8G不清楚能否跑，可以反馈给我，12G跑正常  
-* torch 2.4.1 默认加载改了，所以如果加载模型失败，可以试着升级safetensors 库  
+* torch 2.4.1 加载问题已修复  
 * fix import bugs,fix upsace OOM,add a example workflow  
-* So if the model loading fails, you can try upgrading the safetensors library  
 
 **2024/10/20**
 * Currently, only square 512 images and 2x magnification are supported(目前仅支持方形512图像和2倍放大,官方模型和方法所限)  
@@ -35,7 +34,8 @@ Possible installation difficulties that may be encountered（可能会遇到的�
 * 2.1.2   Although there are ‘visual-cpp-build-tools’, it still fails（diffq）. If you are using the ComfyUI portable package or Akiba package, please add the interpreter address to the Windows system variable.    
 虽然有‘visual-cpp-build-tools，但是还是失败（diffq），如果使用的是comfyUI便携包，或者秋叶包，请将解释器地址加入windows的系统变量里，Linux用户，你都用Linux了，就不用我教了吧，window的做法是，将X:\ComfyUI_windows\python_embeded 和F:\ComfyUI_windows\python_embeded\Scripts 2个地址加入Path系统变量里。   
 * 3.2  ffmpeg   
-* 3.3  If the module is missing, Remove the requirements' # symbol,please pip install       
+* 3.3  If the module is missing, Remove the requirements' # symbol,please pip install
+* 3.4 onnx 错误 
 少了啥，就去掉#号，重新安装    
 
 3 checkpoints
@@ -43,7 +43,7 @@ Possible installation difficulties that may be encountered（可能会遇到的�
 所有模型下载地址（all checkpoints）：[huggingface](https://huggingface.co/fudan-generative-ai/hallo2/tree/main)
 
 ```
-├── ComfyUI/models/hallo/
+├── ComfyUI/models/Hallo/
 |-- audio_separator/
 |   |-- download_checks.json
 |   |-- mdx_model_data.json
