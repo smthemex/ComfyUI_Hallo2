@@ -397,7 +397,7 @@ def compute_face_landmarks(detection_result, h, w):
     return [[p.x * w, p.y * h] for p in face_landmarks_list[0]]
 
 
-def get_landmark(file,model_path):
+def get_landmark(file,task_model_path):
     """
     This function takes a file as input and returns the facial landmarks detected in the file.
 
@@ -414,7 +414,7 @@ def get_landmark(file,model_path):
     VisionRunningMode = mp.tasks.vision.RunningMode
     # Create a face landmarker instance with the video mode:
     options = FaceLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=model_path),
+        base_options=BaseOptions(model_asset_path=task_model_path),
         running_mode=VisionRunningMode.IMAGE,
     )
 
@@ -543,7 +543,7 @@ def get_union_face_mask(landmarks, height, width, expand_ratio=1):
     union_mask = get_union_mask(face_masks)
     return union_mask
 
-def get_mask(file, cache_dir, face_expand_raio,model_path):
+def get_mask(file, cache_dir, face_expand_raio,task_model_path):
     """
     Generate a face mask based on the given landmarks and save it to the specified cache directory.
 
@@ -554,8 +554,8 @@ def get_mask(file, cache_dir, face_expand_raio,model_path):
     Returns:
         None
     """
-    file_path=os.path.join(cache_dir,file)
-    landmarks, height, width = get_landmark(file_path,model_path)
+    file_path_mask=os.path.join(cache_dir,file)
+    landmarks, height, width = get_landmark(file_path_mask,task_model_path)
     file_name = os.path.basename(file).split(".")[0]
     get_lip_mask(landmarks, height, width, os.path.join(cache_dir, f"{file_name}_lip_mask.png"))
     get_face_mask(landmarks, height, width, os.path.join(
