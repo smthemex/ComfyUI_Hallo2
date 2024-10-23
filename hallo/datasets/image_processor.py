@@ -51,7 +51,7 @@ class ImageProcessor:
         __exit__(_exc_type, _exc_val, _exc_tb):
             Exits a runtime context and handles any exceptions that occurred during the processing.
     """
-    def __init__(self, img_size, face_analysis_model_path) -> None:
+    def __init__(self, img_size, weigths_face_analysis_dir) -> None:
         self.img_size = img_size
 
         self.pixel_transform = transforms.Compose(
@@ -100,12 +100,13 @@ class ImageProcessor:
 
         self.face_analysis = FaceAnalysis(
             name="",
-            root=face_analysis_model_path,
+            root=weigths_face_analysis_dir, #...Hallo/face_analysis/
             providers=["CUDAExecutionProvider", "CPUExecutionProvider"],
         )
+       
         self.face_analysis.prepare(ctx_id=0, det_size=(640, 640))
 
-    def preprocess(self, ref_image_pil:Image.Image, cache_dir: str, face_region_ratio: float,model_path):
+    def preprocess(self, ref_image_pil:Image.Image, cache_dir: str, face_region_ratio: float,task_model_path):
         """
         Apply preprocessing to the source image to prepare for face analysis.
 
@@ -146,7 +147,7 @@ class ImageProcessor:
         file_name = os.path.basename(file_name_prefix).split(".")[0]
         #source_image_path=folder_paths.get_output_directory()
         # 2.3 render face mask
-        get_mask(file_name_prefix, cache_dir, face_region_ratio,model_path)
+        get_mask(file_name_prefix, cache_dir, face_region_ratio,task_model_path)
 
         face_mask_pil = Image.open(
             os.path.join(cache_dir, f"{file_name}_face_mask.png")).convert("RGB")
