@@ -34,41 +34,41 @@ from comfy.utils import common_upscale
 MAX_SEED = np.iinfo(np.int32).max
 current_node_path = os.path.dirname(os.path.abspath(__file__))
 # add checkpoints dir
-weigths_current_path = os.path.join(folder_paths.models_dir, "Hallo")
-if not os.path.exists(weigths_current_path):
-    os.makedirs(weigths_current_path)
+weigths_hallo_current_path = os.path.join(folder_paths.models_dir, "Hallo")
+if not os.path.exists(weigths_hallo_current_path):
+    os.makedirs(weigths_hallo_current_path)
     
 try:
-   folder_paths.add_model_folder_path("Hallo", weigths_current_path, False)
+   folder_paths.add_model_folder_path("Hallo", weigths_hallo_current_path, False)
 except:
     try:
-        folder_paths.add_model_folder_path("Hallo", weigths_current_path)
+        folder_paths.add_model_folder_path("Hallo", weigths_hallo_current_path)
         logging.warning("old comfyUI version")
     except:
         raise "please update your comfyUI version"
     
-weigths_audio_path= os.path.join(weigths_current_path, "audio_separator")
+weigths_audio_path= os.path.join(weigths_hallo_current_path, "audio_separator")
 if not os.path.exists(weigths_audio_path):
     os.makedirs(weigths_audio_path)
     
-weigths_wav2vec_path= os.path.join(weigths_current_path, "wav2vec/wav2vec2-base-960h")
+weigths_wav2vec_path= os.path.join(weigths_hallo_current_path, "wav2vec/wav2vec2-base-960h")
 if not os.path.exists(weigths_wav2vec_path):
     os.makedirs(weigths_wav2vec_path)
     
-weigths_motion_path= os.path.join(weigths_current_path, "motion_module")
+weigths_motion_path= os.path.join(weigths_hallo_current_path, "motion_module")
 if not os.path.exists(weigths_motion_path):
     os.makedirs(weigths_motion_path)
     
-weigths_facelib_path= os.path.join(weigths_current_path, "facelib")
+weigths_facelib_path= os.path.join(weigths_hallo_current_path, "facelib")
 if not os.path.exists(weigths_facelib_path):
     os.makedirs(weigths_facelib_path)
     
-weigths_face_analysis_path= os.path.join(weigths_current_path, "face_analysis/models")
-weigths_face_analysis_dir= os.path.join(weigths_current_path, "face_analysis")
+weigths_face_analysis_path= os.path.join(weigths_hallo_current_path, "face_analysis/models")
+weigths_face_analysis_dir= os.path.join(weigths_hallo_current_path, "face_analysis")
 if not os.path.exists(weigths_face_analysis_path):
     os.makedirs(weigths_face_analysis_path)
 
-weigths_hallo2_path= os.path.join(weigths_current_path, "hallo2")
+weigths_hallo2_path= os.path.join(weigths_hallo_current_path, "hallo2")
 if not os.path.exists(weigths_hallo2_path):
     os.makedirs(weigths_hallo2_path)
 
@@ -255,17 +255,18 @@ class HalloPreImgAndAudio:
         cache_path = folder_paths.get_output_directory()
         #pre models
         print("pre img processing")
-        model_path=os.path.join(weigths_face_analysis_path,"face_landmarker_v2_with_blendshapes.task")
-        if not os.path.exists(model_path): # download if none
+        #task_model_path=os.path.join(weigths_face_analysis_path,"face_landmarker_v2_with_blendshapes.task")
+        task_model_path = "models/Hallo/face_analysis/models/face_landmarker_v2_with_blendshapes.task"
+        if not os.path.exists(task_model_path): # download if none
             hf_hub_download(
                 repo_id="fudan-generative-ai/hallo2",
                 subfolder="face_analysis/models",
                 filename="face_landmarker_v2_with_blendshapes.task",
-                local_dir=weigths_current_path,
+                local_dir=weigths_hallo_current_path,
             )
 
         clip_length, source_image_lip_mask, source_image_face_mask, source_image_full_mask, source_image_face_emb, source_image_face_region, source_image_pixels\
-            =pre_img(img_pil,cache_path,face_expand_ratio,width,height,model_path)
+            =pre_img(img_pil,cache_path,face_expand_ratio,width,height,task_model_path)
         
         source_image_pixels = source_image_pixels.unsqueeze(0)
         source_image_face_region = source_image_face_region.unsqueeze(0)
@@ -314,7 +315,7 @@ class HalloPreImgAndAudio:
                     repo_id="fudan-generative-ai/hallo2",
                     subfolder="wav2vec/wav2vec2-base-960h",
                     filename=i,
-                    local_dir=weigths_current_path,
+                    local_dir=weigths_hallo_current_path,
                 )
         print("pre radio processing")
         audio_embs, audio_length = load_audio(use_cut, driving_audio_file, save_path, sample_rate, fps,
@@ -398,7 +399,7 @@ class HalloLoader:
                 repo_id="fudan-generative-ai/hallo2",
                 subfolder="hallo2",
                 filename="net.pth",
-                local_dir=weigths_current_path,
+                local_dir=weigths_hallo_current_path,
             )
         
         # Freeze
@@ -597,7 +598,7 @@ class HallosUpscaleloader:
                 repo_id="fudan-generative-ai/hallo2",
                 subfolder="facelib",
                 filename="parsing_parsenet.pth",
-                local_dir=weigths_current_path,
+                local_dir=weigths_hallo_current_path,
             )
         
         if face_detection_model == "none":
@@ -611,7 +612,7 @@ class HallosUpscaleloader:
                 repo_id="fudan-generative-ai/hallo2",
                 subfolder="hallo2",
                 filename="net_g.pth",
-                local_dir=weigths_current_path,
+                local_dir=weigths_hallo_current_path,
             )
     
         net,face_upsampler,bg_upsampler,face_helper=pre_u_loader(bg_upsampler, model_path, bg_tile, upscale, face_upsample, device, hallo_model_path,face_detection_model,parse_model,has_aligned)
