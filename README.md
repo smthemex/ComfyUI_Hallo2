@@ -2,12 +2,8 @@
 [Hallo2](https://github.com/fudan-generative-vision/hallo2): Long-Duration and High-Resolution Audio-driven Portrait Image Animation,
 
 ## Updates:
-**2024/10/21** 
-* 修复模块导入的错误，以及显存溢出，8G不清楚能否跑，可以反馈给我，12G跑正常  
-* torch 2.4.1 加载问题已修复  
-* fix import bugs,fix upsace OOM,add a example workflow  
-
-**2024/10/20**
+**2024/10/22** 
+* 修复task地址绝对引用可能出现的问题。（fix bug）
 * Currently, only square 512 images and 2x magnification are supported(目前仅支持方形512图像和2倍放大,官方模型和方法所限)  
 * input audio must be *.wav (输入的音频格式只能是wav,采样用的是16000,你要用高保真的自己合成就是了,别矫情.)
   
