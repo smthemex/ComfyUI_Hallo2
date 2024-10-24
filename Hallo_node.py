@@ -255,8 +255,8 @@ class HalloPreImgAndAudio:
         cache_path = folder_paths.get_output_directory()
         #pre models
         print("pre img processing")
-        #task_model_path=os.path.join(weigths_face_analysis_path,"face_landmarker_v2_with_blendshapes.task")
-        task_model_path = "models/Hallo/face_analysis/models/face_landmarker_v2_with_blendshapes.task"
+        task_model_path=os.path.join(weigths_face_analysis_path,"face_landmarker_v2_with_blendshapes.task")
+        #task_model_path = "models/Hallo/face_analysis/models/face_landmarker_v2_with_blendshapes.task"
         if not os.path.exists(task_model_path): # download if none
             hf_hub_download(
                 repo_id="fudan-generative-ai/hallo2",
