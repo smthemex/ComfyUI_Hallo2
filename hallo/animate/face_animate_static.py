@@ -53,7 +53,7 @@ from einops import rearrange
 from tqdm import tqdm
 from transformers import CLIPImageProcessor
 
-from hallo.models.mutual_self_attention import ReferenceAttentionControl
+from ..models.mutual_self_attention import ReferenceAttentionControl
 
 if is_accelerate_available():
     from accelerate import cpu_offload
